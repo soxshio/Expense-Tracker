@@ -18,4 +18,96 @@ document.addEventListener('DOMContentLoaded', function(){
             else { pwd.type = 'password'; toggle.textContent = 'Show'; }
         });
     }
+
+    // (forget-device feature removed)
 });
+    // Inline edit for transactions
+    document.querySelectorAll('.editBtn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            const row = btn.closest('tr');
+            if (!row) return;
+            const id = row.dataset.id;
+            if (row.classList.contains('editing')) return;
+            row.classList.add('editing');
+
+            const cells = {
+                date: row.querySelector('.cell-date'),
+                type: row.querySelector('.cell-type'),
+                category: row.querySelector('.cell-category'),
+                note: row.querySelector('.cell-note'),
+                amount: row.querySelector('.cell-amount'),
+                actions: row.querySelector('.cell-actions')
+            };
+
+            const orig = {
+                date: cells.date.textContent.trim(),
+                type: cells.type.textContent.trim(),
+                category: cells.category.textContent.trim(),
+                note: cells.note.textContent.trim(),
+                amount: cells.amount.textContent.trim()
+            };
+
+            cells.date.innerHTML = `<input type="date" value="${orig.date.split(' ')[0] || ''}">`;
+            cells.type.innerHTML = `<select><option value="income">Income</option><option value="expense">Expense</option></select>`;
+            cells.type.querySelector('select').value = orig.type;
+            cells.category.innerHTML = `<input type="text" value="${orig.category}">`;
+            cells.note.innerHTML = `<input type="text" value="${orig.note}">`;
+            cells.amount.innerHTML = `<input type="number" step="0.01" value="${orig.amount.replace(/,/g,'')}">`;
+
+            cells.actions.innerHTML = `<button class="btn saveBtn" style="background:#10b981">Save</button> <button class="btn cancelBtn" style="background:#ef4444">Cancel</button>`;
+
+            const saveBtn = cells.actions.querySelector('.saveBtn');
+            const cancelBtn = cells.actions.querySelector('.cancelBtn');
+
+            cancelBtn.addEventListener('click', function(){
+                cells.date.textContent = orig.date;
+                cells.type.textContent = orig.type;
+                cells.category.textContent = orig.category;
+                cells.note.textContent = orig.note;
+                cells.amount.textContent = orig.amount;
+                cells.actions.innerHTML = `<button class="btn editBtn" data-id="${id}" style="background:#f97316;padding:6px 8px;font-size:13px">Edit</button>`;
+                row.classList.remove('editing');
+                cells.actions.querySelector('.editBtn').addEventListener('click', function(){ btn.click(); });
+            });
+
+            saveBtn.addEventListener('click', function(){
+                const payload = new URLSearchParams();
+                payload.append('id', id);
+                payload.append('date', cells.date.querySelector('input').value);
+                payload.append('type', cells.type.querySelector('select').value);
+                payload.append('category', cells.category.querySelector('input').value);
+                payload.append('note', cells.note.querySelector('input').value);
+                payload.append('amount', cells.amount.querySelector('input').value);
+
+                saveBtn.disabled = true;
+                fetch('update_transaction.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: payload.toString(),
+                    credentials: 'same-origin'
+                }).then(r => r.json()).then(data => {
+                    if (data.ok && data.transaction) {
+                        const tr = data.transaction;
+                        cells.date.textContent = tr.transaction_date;
+                        cells.type.textContent = tr.type;
+                        cells.category.textContent = tr.category;
+                        cells.note.textContent = tr.note || '';
+                        cells.amount.textContent = parseFloat(tr.amount).toFixed(2);
+                        cells.actions.innerHTML = `<button class="btn editBtn" data-id="${id}" style="background:#f97316;padding:6px 8px;font-size:13px">Edit</button>`;
+                    } else {
+                        alert(data.error || 'Failed to update');
+                    }
+                }).catch(err => { alert('Network error'); }).finally(()=>{ row.classList.remove('editing'); });
+            });
+        });
+    });
+
+    // Confirm logout
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e){
+            if (!confirm('Are you sure you want to log out?')) {
+                e.preventDefault();
+            }
+        });
+    }

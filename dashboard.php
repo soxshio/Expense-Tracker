@@ -57,6 +57,7 @@ $tx_stmt->close();
             <h1>Dashboard</h1>
             <div>
                 <button id="addBtn" class="btn">Add Transaction</button>
+                <a id="logoutBtn" href="logout.php" class="btn" style="background:#ef4444">Logout</a>
             </div>
         </div>
 
@@ -92,21 +93,24 @@ $tx_stmt->close();
             <h3>Recent Transactions</h3>
             <table class="table">
                 <thead>
-                    <tr><th>Date</th><th>Type</th><th>Category</th><th>Note</th><th>Amount</th></tr>
+                    <tr><th>Date</th><th>Type</th><th>Category</th><th>Note</th><th>Amount</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <?php if (!empty($transactions)): ?>
                         <?php foreach ($transactions as $t): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($t['transaction_date']); ?></td>
-                                <td><?php echo htmlspecialchars($t['type']); ?></td>
-                                <td><?php echo htmlspecialchars($t['category']); ?></td>
-                                <td><?php echo htmlspecialchars($t['note'] ?? ''); ?></td>
-                                <td><?php echo number_format($t['amount'],2); ?></td>
+                            <tr data-id="<?php echo (int)$t['id']; ?>">
+                                <td class="cell-date"><?php echo htmlspecialchars($t['transaction_date']); ?></td>
+                                <td class="cell-type"><?php echo htmlspecialchars($t['type']); ?></td>
+                                <td class="cell-category"><?php echo htmlspecialchars($t['category']); ?></td>
+                                <td class="cell-note"><?php echo htmlspecialchars($t['note'] ?? ''); ?></td>
+                                <td class="cell-amount"><?php echo number_format($t['amount'],2); ?></td>
+                                <td class="cell-actions">
+                                    <button class="btn editBtn" data-id="<?php echo (int)$t['id']; ?>" style="background:#f97316;padding:6px 8px;font-size:13px">Edit</button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="5">No transactions yet.</td></tr>
+                        <tr><td colspan="6">No transactions yet.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

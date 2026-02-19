@@ -42,15 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 		if ($row = $res->fetch_assoc()) {
 			if (password_verify($password, $row['password'])) {
 				$_SESSION['user_id'] = $row['id'];
-				// handle remember me
-				if (!empty($_POST['remember'])) {
-					$token = bin2hex(random_bytes(32));
-					$upd = $conn->prepare('UPDATE users SET remember_token = ? WHERE id = ?');
-					$upd->bind_param('si', $token, $row['id']);
-					$upd->execute();
-					$upd->close();
-					setcookie('remember_token', $token, time()+60*60*24*30, '/', '', false, true);
-				}
+				// successful login (no remember-me)
 				header('Location: dashboard.php');
 				exit();
 			} else {
@@ -106,11 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					<label for="password">Password</label>
 					<div style="position:relative">
 						<input id="password" name="password" type="password" required>
-						<button type="button" id="togglePassword" style="position:absolute;right:8px;top:8px;background:transparent;border:none;cursor:pointer">Show</button>
 					</div>
 				</div>
 				<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-					<label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="remember"> Remember me</label>
 					<a href="forgot_password.php" style="color:#374151;text-decoration:none;margin-left:auto" class="muted">Forgot password?</a>
 				</div>
 
