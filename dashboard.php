@@ -32,8 +32,33 @@ $stmt->close();
 ?>
 
 <?php
-// Fetch recent transactions for display
-$tx_stmt = $conn->prepare("SELECT id, type, amount, category, transaction_date FROM transactions WHERE user_id=? ORDER BY transaction_date DESC LIMIT 20");
+// Fetch recent transactions for display and trashed count (if column exists)
+$dbRow = $conn->query("SELECT DATABASE()")->fetch_row();
+$dbName = $dbRow ? $dbRow[0] : null;
+$hasDeletedAt = false;
+if ($dbName) {
+    $col_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'transactions' AND COLUMN_NAME = 'deleted_at'");
+    $col_stmt->bind_param('s', $dbName);
+    $col_stmt->execute();
+    $col_res = $col_stmt->get_result();
+    $col_row = $col_res->fetch_assoc();
+    $hasDeletedAt = !empty($col_row['cnt']);
+    $col_stmt->close();
+}
+
+$trash_count = 0;
+if ($hasDeletedAt) {
+    $tx_stmt = $conn->prepare("SELECT id, type, amount, category, note, transaction_date FROM transactions WHERE user_id=? AND deleted_at IS NULL ORDER BY transaction_date DESC LIMIT 20");
+    $count_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM transactions WHERE user_id = ? AND deleted_at IS NOT NULL");
+    $count_stmt->bind_param('i', $user_id);
+    $count_stmt->execute();
+    $count_res = $count_stmt->get_result();
+    $count_row = $count_res->fetch_assoc();
+    $trash_count = (int)($count_row['cnt'] ?? 0);
+    $count_stmt->close();
+} else {
+    $tx_stmt = $conn->prepare("SELECT id, type, amount, category, note, transaction_date FROM transactions WHERE user_id=? ORDER BY transaction_date DESC LIMIT 20");
+}
 $tx_stmt->bind_param("i", $user_id);
 $tx_stmt->execute();
 $tx_result = $tx_stmt->get_result();
@@ -52,27 +77,66 @@ $tx_stmt->close();
     <style> .hidden{display:none} </style>
 </head>
 <body>
-    <div class="container">
+    <div class="layout">
+        <aside class="sidebar collapsed" id="sidebar">
+            <div class="top">
+                <div class="brand">ExpenseTracker</div>
+                <button id="sidebarToggle" class="btn" aria-label="Toggle sidebar" style="padding:6px">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3 12h18M3 6h18M3 18h18" stroke="#374151" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+            <nav>
+                <a href="dashboard.php">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-home"></use></svg></span>
+                    <span class="label">Dashboard</span>
+                </a>
+                <a href="#" id="sidebarAdd">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-add"></use></svg></span>
+                    <span class="label">Add</span>
+                </a>
+                <a href="trash.php">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-trash"></use></svg></span>
+                    <span class="label">Trash</span>
+                    <span class="badge" id="trashCount"><?php echo (int)$trash_count; ?></span>
+                </a>
+                <a href="#">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-reports"></use></svg></span>
+                    <span class="label">Reports</span>
+                </a>
+                <a href="#">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg></span>
+                    <span class="label">Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-bottom">
+                <a id="sidebarLogout" href="logout.php" class="btn logout-btn" style="background:#ef4444;color:#fff;border-radius:6px;"> 
+                    <span class="icon"><svg width="16" height="16" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg></span>
+                    <span class="label">Logout</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main">
+        <div class="container">
         <div class="header">
             <h1>Dashboard</h1>
             <div>
                 <button id="addBtn" class="btn">Add Transaction</button>
-                <a id="logoutBtn" href="logout.php" class="btn" style="background:#ef4444">Logout</a>
             </div>
         </div>
 
         <div class="stats">
             <div class="card">
                 <div class="label">Total Income</div>
-                <div class="value"><?php echo number_format($income,2); ?></div>
+                <div class="value" id="totalIncome"><?php echo number_format($income,2); ?></div>
             </div>
             <div class="card">
                 <div class="label">Total Expense</div>
-                <div class="value"><?php echo number_format($expense,2); ?></div>
+                <div class="value" id="totalExpense"><?php echo number_format($expense,2); ?></div>
             </div>
             <div class="card">
                 <div class="label">Balance</div>
-                <div class="value"><?php echo number_format($balance,2); ?></div>
+                <div class="value" id="balance"><?php echo number_format($balance,2); ?></div>
             </div>
         </div>
 
@@ -106,6 +170,7 @@ $tx_stmt->close();
                                 <td class="cell-amount"><?php echo number_format($t['amount'],2); ?></td>
                                 <td class="cell-actions">
                                     <button class="btn editBtn" data-id="<?php echo (int)$t['id']; ?>" style="background:#f97316;padding:6px 8px;font-size:13px">Edit</button>
+                                    <button class="btn deleteBtn" data-id="<?php echo (int)$t['id']; ?>" aria-label="Delete transaction" style="background:#ef4444;padding:6px 8px;font-size:13px;margin-left:6px">Delete</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -116,6 +181,8 @@ $tx_stmt->close();
             </table>
             <div class="footer-note">Manage transactions using the form above.</div>
         </div>
+        </div>
+        </main>
     </div>
 </body>
 </html>

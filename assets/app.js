@@ -102,12 +102,99 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     });
 
-    // Confirm logout
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function(e){
-            if (!confirm('Are you sure you want to log out?')) {
-                e.preventDefault();
-            }
+    // Confirm logout (header or sidebar)
+    ['logoutBtn','sidebarLogout'].forEach(function(id){
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', function(e){ if (!confirm('Are you sure you want to log out?')) e.preventDefault(); });
+    });
+
+    // Sidebar toggle behavior
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarAdd = document.getElementById('sidebarAdd');
+    if (sidebar && sidebarToggle) {
+        // restore saved state
+        try { if (localStorage.getItem('sidebarCollapsed') === 'false') sidebar.classList.remove('collapsed'); } catch(e){}
+        sidebarToggle.addEventListener('click', function(){
+            sidebar.classList.toggle('collapsed');
+            try { localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed')); } catch(e){}
         });
     }
+    if (sidebarAdd) {
+        sidebarAdd.addEventListener('click', function(e){ e.preventDefault(); const addBtn = document.getElementById('addBtn'); if (addBtn) addBtn.click(); });
+    }
+
+    // Live update: fetch trashed count from server periodically
+    function updateTrashCount(){
+        fetch('get_trash_count.php', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('trashCount');
+                if (!badge) return;
+                badge.textContent = (data && typeof data.count === 'number') ? data.count : badge.textContent;
+            }).catch(()=>{});
+    }
+    // initial fetch
+    updateTrashCount();
+    // poll every 30s
+    setInterval(updateTrashCount, 30000);
+
+    // Delete (soft-delete) transaction: delegated handler
+    document.addEventListener('click', function(e){
+        const btn = e.target.closest && e.target.closest('.deleteBtn');
+        if (!btn) return;
+        e.preventDefault();
+        if (!confirm('Move this transaction to Trash? It will be permanently deleted after 30 days.')) return;
+        const row = btn.closest('tr');
+        if (!row) return;
+        const id = row.dataset.id;
+        // capture type and amount before removing the row
+        const typeCell = row.querySelector('.cell-type');
+        const amountCell = row.querySelector('.cell-amount');
+        const type = typeCell ? typeCell.textContent.trim().toLowerCase() : '';
+        const amount = amountCell ? (parseFloat(amountCell.textContent.replace(/,/g,'')) || 0) : 0;
+
+        btn.disabled = true;
+        const payload = new URLSearchParams();
+        payload.append('id', id);
+        fetch('soft_delete_transaction.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: payload.toString(),
+            credentials: 'same-origin'
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                // update totals on the page
+                function parseDisplayed(el) {
+                    if (!el) return 0;
+                    return parseFloat(el.textContent.replace(/,/g,'')) || 0;
+                }
+                function formatCurrency(n) {
+                    return n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+                }
+                const incomeEl = document.getElementById('totalIncome');
+                const expenseEl = document.getElementById('totalExpense');
+                const balanceEl = document.getElementById('balance');
+                let incomeVal = parseDisplayed(incomeEl);
+                let expenseVal = parseDisplayed(expenseEl);
+                if (type === 'income') incomeVal = Math.max(0, incomeVal - amount);
+                else expenseVal = Math.max(0, expenseVal - amount);
+                const balanceVal = incomeVal - expenseVal;
+                if (incomeEl) incomeEl.textContent = formatCurrency(incomeVal);
+                if (expenseEl) expenseEl.textContent = formatCurrency(expenseVal);
+                if (balanceEl) balanceEl.textContent = formatCurrency(balanceVal);
+
+                // decrement trash count badge if present
+                const trashBadge = document.getElementById('trashCount');
+                if (trashBadge) {
+                    const cur = parseInt(trashBadge.textContent||'0') || 0;
+                    trashBadge.textContent = Math.max(0, cur + 1);
+                }
+
+                // remove row from dashboard
+                row.remove();
+            } else {
+                alert(data.error || 'Failed to delete');
+            }
+        }).catch(err => { alert('Network error'); }).finally(()=>{ btn.disabled = false; });
+    });
