@@ -1,0 +1,25 @@
+/* Basic responsive dashboard styles */
+:root{
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --accent:#4f46e5;
+    --text:#111827;
+}
+*{box-sizing:border-box}
+body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--text)}
+.container{max-width:1100px;margin:28px auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.header h1{margin:0;font-size:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--card);padding:14px;border-radius:8px;box-shadow:0 1px 2px rgba(16,24,40,0.04)}
+.card .label{font-size:12px;color:#6b7280}
+.card .value{font-size:20px;font-weight:600;margin-top:6px}
+.transactions{margin-top:12px}
+.table{width:100%;border-collapse:collapse;background:transparent}
+.table th,.table td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef2f7}
+.table th{font-size:13px;color:#6b7280}
+.btn{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;border:none;cursor:pointer}
+.add-form{display:flex;gap:8px;margin-top:12px}
+.input,select{padding:8px;border:1px solid #e6e9ef;border-radius:6px;min-width:0}
+.footer-note{color:#6b7280;font-size:13px;margin-top:10px}
+@media (max-width:480px){.header{flex-direction:column;align-items:flex-start}.add-form{flex-direction:column}}
