@@ -8,17 +8,26 @@ if (!isset($_SESSION['user_id'])) {
 }
 // logged-in user ID
 $user_id = $_SESSION['user_id'];
+// Detect whether `deleted_at` column exists so totals exclude trashed rows
+$dbRowForTotals = $conn->query("SELECT DATABASE()")->fetch_row();
+$dbNameForTotals = $dbRowForTotals ? $dbRowForTotals[0] : null;
+$hasDeletedAtForTotals = false;
+if ($dbNameForTotals) {
+    $col_stmt_tot = $conn->prepare("SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'transactions' AND COLUMN_NAME = 'deleted_at'");
+    $col_stmt_tot->bind_param('s', $dbNameForTotals);
+    $col_stmt_tot->execute();
+    $col_res_tot = $col_stmt_tot->get_result();
+    $col_row_tot = $col_res_tot->fetch_assoc();
+    $hasDeletedAtForTotals = !empty($col_row_tot['cnt']);
+    $col_stmt_tot->close();
+}
 
-// Get total income/expense
-$stmt = $conn->prepare(
-    "
-    SELECT 
-        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as total_income,
-        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as total_expense
-    FROM transactions
-    WHERE user_id=?
-" 
-);
+// Get total income/expense (exclude trashed rows when possible)
+$totals_sql = "SELECT SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as total_income, SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as total_expense FROM transactions WHERE user_id=?";
+if ($hasDeletedAtForTotals) {
+    $totals_sql .= " AND deleted_at IS NULL";
+}
+$stmt = $conn->prepare($totals_sql);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -94,14 +103,14 @@ $tx_stmt->close();
                     <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-add"></use></svg></span>
                     <span class="label">Add</span>
                 </a>
+                 <a href="#">
+                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg></span>
+                    <span class="label">Type</span>
+                </a>
                 <a href="trash.php">
                     <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-trash"></use></svg></span>
-                    <span class="label">Trash</span>
+                    <span class="label">Deleted</span>
                     <span class="badge" id="trashCount"><?php echo (int)$trash_count; ?></span>
-                </a>
-                <a href="#">
-                    <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-reports"></use></svg></span>
-                    <span class="label">Reports</span>
                 </a>
                 <a href="#">
                     <span class="icon"><svg width="20" height="20" aria-hidden="true"><use href="assets/icons.svg#icon-settings"></use></svg></span>

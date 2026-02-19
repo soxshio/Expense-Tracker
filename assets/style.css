@@ -50,6 +50,17 @@ body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);
 .table{width:100%;border-collapse:collapse;background:transparent}
 .table th,.table td{padding:10px 8px;text-align:left;border-bottom:1px solid #eef2f7}
 .table th{font-size:13px;color:#6b7280}
+.table tbody tr:hover{background:#fbfbfd}
+.table .amount-col{text-align:right;font-variant-numeric:tabular-nums}
+.restore-btn{background:#10b981;color:#fff;border:none;border-radius:6px;padding:6px 8px;cursor:pointer}
+.purge-btn{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 8px;cursor:pointer}
+.card p{margin:0}
+.trash-toolbar{display:flex;gap:8px;align-items:center}
+.days-left{font-size:13px;color:#374151}
+.days-left.due{color:#ef4444;font-weight:600}
+/* Small top offset for Trash header buttons */
+.trash-header .btn{margin-top:20px}
+.trash-header{margin-top:12px}
 .btn{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:6px;text-decoration:none;border:none;cursor:pointer}
 .add-form{display:flex;gap:8px;margin-top:12px}
 .input,select{padding:8px;border:1px solid #e6e9ef;border-radius:6px;min-width:0}
