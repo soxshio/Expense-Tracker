@@ -6,11 +6,34 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
+// logged-in user ID
+$user_id = $_SESSION['user_id'];
+
+// Get total income/expense
+$stmt = $conn->prepare(
+    "
+    SELECT 
+        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as total_income,
+        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as total_expense
+    FROM transactions
+    WHERE user_id=?
+" 
+);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+
+$income = $row['total_income'] ?? 0;
+$expense = $row['total_expense'] ?? 0;
+$balance = $income - $expense;
+
+$stmt->close();
 ?>
 
 <?php
 // Fetch recent transactions for display
-$tx_stmt = $conn->prepare("SELECT id, type, amount, category, note, date FROM transactions WHERE user_id=? ORDER BY date DESC LIMIT 20");
+$tx_stmt = $conn->prepare("SELECT id, type, amount, category, transaction_date FROM transactions WHERE user_id=? ORDER BY transaction_date DESC LIMIT 20");
 $tx_stmt->bind_param("i", $user_id);
 $tx_stmt->execute();
 $tx_result = $tx_stmt->get_result();
@@ -75,10 +98,10 @@ $tx_stmt->close();
                     <?php if (!empty($transactions)): ?>
                         <?php foreach ($transactions as $t): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($t['date']); ?></td>
+                                <td><?php echo htmlspecialchars($t['transaction_date']); ?></td>
                                 <td><?php echo htmlspecialchars($t['type']); ?></td>
                                 <td><?php echo htmlspecialchars($t['category']); ?></td>
-                                <td><?php echo htmlspecialchars($t['note']); ?></td>
+                                <td><?php echo htmlspecialchars($t['note'] ?? ''); ?></td>
                                 <td><?php echo number_format($t['amount'],2); ?></td>
                             </tr>
                         <?php endforeach; ?>
