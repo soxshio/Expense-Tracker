@@ -22,7 +22,7 @@ body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);
 .sidebar .icon svg{display:block;width:20px;height:20px}
 .sidebar .icon svg use{stroke:currentColor}
 .sidebar .badge{margin-left:auto;background:#ef4444;color:#fff;padding:2px 8px;border-radius:999px;font-size:12px}
-.sidebar .sidebar-bottom{margin-top:auto}
+.sidebar .sidebar-bottom{margin-top:auto;}
 .sidebar .btn{width:100%;display:inline-flex;align-items:center;justify-content:flex-start;padding:8px 10px}
 .sidebar .btn .icon{margin-right:8px}
 .sidebar.collapsed .btn{justify-content:center;padding:8px}
@@ -66,3 +66,13 @@ body{font-family:Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);
 .input,select{padding:8px;border:1px solid #e6e9ef;border-radius:6px;min-width:0}
 .footer-note{color:#6b7280;font-size:13px;margin-top:10px}
 @media (max-width:480px){.header{flex-direction:column;align-items:flex-start}.add-form{flex-direction:column}}
+
+/* graph container */
+.charts-row {display: flex; justify-content: center;margin-top: 20px;}
+.chart-card { flex: 0 1 800px;max-width: 800px; width: 100%;background: #fff;padding: 15px;border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);}
+.chart-card canvas { width: 100% !important;height: auto !important;}
+
+
+
+
+

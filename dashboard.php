@@ -73,6 +73,24 @@ $tx_stmt->execute();
 $tx_result = $tx_stmt->get_result();
 $transactions = $tx_result->fetch_all(MYSQLI_ASSOC);
 $tx_stmt->close();
+
+// Group transactions by month
+$monthly_income = array_fill(1, 12, 0);
+$monthly_expense = array_fill(1, 12, 0);
+
+foreach ($transactions as $t) {
+    $month = (int)date('n', strtotime($t['transaction_date']));
+    if ($t['type'] === 'income') {
+        $monthly_income[$month] += $t['amount'];
+    } else {
+        $monthly_expense[$month] += $t['amount'];
+    }
+}
+// Monthly balance
+$monthly_balance = [];
+for ($m = 1; $m <= 12; $m++) {
+    $monthly_balance[$m] = $monthly_income[$m] - $monthly_expense[$m];
+}
 ?>
 
 <!DOCTYPE html>
@@ -83,6 +101,7 @@ $tx_stmt->close();
     <title>Expense Tracker Dashboard</title>
     <link rel="stylesheet" href="assets/style.css">
     <script defer src="assets/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js">// For charts</script> 
     <style> .hidden{display:none} </style>
 </head>
 <body>
@@ -148,7 +167,16 @@ $tx_stmt->close();
                 <div class="value" id="balance"><?php echo number_format($balance,2); ?></div>
             </div>
         </div>
+        <div class="charts-row">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>Income & Expense with Balance</h3>
+            </div>
+            <canvas id="comboChart"></canvas>
+        </div>
+        </div>
 
+        </div>
         <div id="addForm" class="card hidden">
             <form method="POST" action="add_transaction.php" class="add-form">
                 <select name="type" required>
@@ -194,6 +222,77 @@ $tx_stmt->close();
         </main>
     </div>
 </body>
+
+<script>
+    const monthlyIncome = <?php echo json_encode(array_values($monthly_income)); ?>;
+    const monthlyExpense = <?php echo json_encode(array_values($monthly_expense)); ?>;
+    const monthlyBalance = <?php echo json_encode(array_values($monthly_balance)); ?>;
+
+    const ctxCombo = document.getElementById('comboChart').getContext('2d');
+    const comboChart = new Chart(ctxCombo, {
+        data: {
+            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Income',
+                    data: monthlyIncome,
+                    backgroundColor: 'rgba(16,185,129,0.7)',
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'bar',
+                    label: 'Expense',
+                    data: monthlyExpense,
+                    backgroundColor: 'rgba(239,68,68,0.7)',
+                    yAxisID: 'y'
+                },
+                {
+                    type: 'line',
+                    label: 'Balance',
+                    data: monthlyBalance,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.2)',
+                    fill: false,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            interaction: {
+                mode: 'index',   // show all datasets at hovered index
+                intersect: false
+            },
+            plugins: {
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.formattedValue;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    position: 'left',
+                    title: { display: true, text: 'Income & Expense' }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false },
+                    title: { display: true, text: 'Balance' }
+                }
+            }
+        }
+    });
+</script>
+
 </html>
 
 
