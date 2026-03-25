@@ -167,15 +167,10 @@ for ($m = 1; $m <= 12; $m++) {
                 <div class="value" id="balance"><?php echo number_format($balance,2); ?></div>
             </div>
         </div>
-        <div class="charts-row">
-        <div class="chart-card">
-            <div class="chart-header">
-                <h3>Income & Expense with Balance</h3>
+            <div class="card chart-container">
+                <h3>Monthly Overview</h3>
+                <canvas id="comboChart"></canvas>
             </div>
-            <canvas id="comboChart"></canvas>
-        </div>
-        </div>
-
         </div>
         <div id="addForm" class="card hidden">
             <form method="POST" action="add_transaction.php" class="add-form">
@@ -224,73 +219,86 @@ for ($m = 1; $m <= 12; $m++) {
 </body>
 
 <script>
-    const monthlyIncome = <?php echo json_encode(array_values($monthly_income)); ?>;
-    const monthlyExpense = <?php echo json_encode(array_values($monthly_expense)); ?>;
-    const monthlyBalance = <?php echo json_encode(array_values($monthly_balance)); ?>;
+const monthlyIncome = <?php echo json_encode(array_values($monthly_income)); ?>;
+const monthlyExpense = <?php echo json_encode(array_values($monthly_expense)); ?>;
+const monthlyBalance = <?php echo json_encode(array_values($monthly_balance)); ?>;
 
-    const ctxCombo = document.getElementById('comboChart').getContext('2d');
-    const comboChart = new Chart(ctxCombo, {
-        data: {
-            labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-            datasets: [
-                {
-                    type: 'bar',
-                    label: 'Income',
-                    data: monthlyIncome,
-                    backgroundColor: 'rgba(16,185,129,0.7)',
-                    yAxisID: 'y'
-                },
-                {
-                    type: 'bar',
-                    label: 'Expense',
-                    data: monthlyExpense,
-                    backgroundColor: 'rgba(239,68,68,0.7)',
-                    yAxisID: 'y'
-                },
-                {
-                    type: 'line',
-                    label: 'Balance',
-                    data: monthlyBalance,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59,130,246,0.2)',
-                    fill: false,
-                    tension: 0.3,
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            interaction: {
-                mode: 'index',   // show all datasets at hovered index
-                intersect: false
+const ctxCombo = document.getElementById('comboChart');
+
+new Chart(ctxCombo, {
+    data: {
+        labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+        datasets: [
+            {
+                type: 'bar',
+                label: 'Income',
+                data: monthlyIncome,
+                backgroundColor: 'rgba(34,197,94,0.7)', // green
+                borderRadius: 6
             },
-            plugins: {
-                tooltip: {
-                    enabled: true,
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.formattedValue;
-                        }
+            {
+                type: 'bar',
+                label: 'Expense',
+                data: monthlyExpense,
+                backgroundColor: 'rgba(239,68,68,0.7)', // red
+                borderRadius: 6
+            },
+            {
+                type: 'line',
+                label: 'Balance',
+                data: monthlyBalance,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59,130,246,0.2)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#3b82f6',
+                yAxisID: 'y1'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true, // better for dashboards
+        interaction: {
+            mode: 'index',
+            intersect: false
+        },
+        plugins: {
+            legend: {
+                position: 'top'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ₱' + context.raw.toLocaleString();
                     }
                 }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                position: 'left',
+                title: {
+                    display: true,
+                    text: 'Income & Expense'
+                }
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    position: 'left',
-                    title: { display: true, text: 'Income & Expense' }
+            y1: {
+                beginAtZero: true,
+                position: 'right',
+                grid: {
+                    drawOnChartArea: false
                 },
-                y1: {
-                    beginAtZero: true,
-                    position: 'right',
-                    grid: { drawOnChartArea: false },
-                    title: { display: true, text: 'Balance' }
+                title: {
+                    display: true,
+                    text: 'Balance'
                 }
             }
         }
-    });
+    }
+});
 </script>
 
 </html>
